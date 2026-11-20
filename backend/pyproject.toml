@@ -1,0 +1,23 @@
+[tool.fastapi]
+entrypoint = "app.main:app"
+
+[project]
+name = "ai-text-summarization-api"
+version = "0.1.0"
+requires-python = ">=3.13"
+readme = "README.md"
+dependencies = [
+    "fastapi[standard]>=0.165.0",
+    "pydantic>=2.14.4",
+] 
+
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.6",
+]
+
+
+[tool.ruff]
+line-length = 100
