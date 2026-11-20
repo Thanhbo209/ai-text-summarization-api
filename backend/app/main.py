@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
 app = FastAPI()
 
@@ -12,6 +11,3 @@ def home():
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
-
-client = TestClient(app)
