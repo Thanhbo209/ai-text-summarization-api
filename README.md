@@ -1,1 +1,13 @@
-<iframe src="https://mermaid.live/embed?theme=redux-dark-color&look=classic&mode=dark#pako:eNpdkNtu2kAQhl9lNFetZF6Ai0rEkMTBJAhHveiai6l3glfsge4hDYnz7hULRkovZ7_vH_2zH9g5yTjFF-3-dj35CM_z1rcWAGAmSq3Yxi1MJj-GDf9JHOIAN-KWQpytq-0o3pwEKMVsXcGSjzBLsWcbVUdROXvVyqzNxYalCrChyFAroyL7qzLPykKsj5JOC-AnaSW_rllk5040yRjy6j1TaNi_qo6v1l227r9V9pAiNOqdv4_oPqOhMaT1AJWo6xWsvXtVkn2-FZZiw-HgbGBYOcl6-1-0Jr_jAR7EM79FKPtk92O0vvZiWFDXn-mZrUTpzG9lGSob2RuW6vQJlwCHs_UobpUlfXk-XhqNDZZ5fBIPzdMjjC1zPyxw55XEafSJCzTsDZ1G_Ggx9my4xWmLnmV6m0jy-0nntPMtFi1q5_aZdppCUF2Ln1jggewv58y40Lu063H6QjpwgekgKfJc0c7TRfn8BzXdwBM" width="100%" height="480" style="border:0" loading="lazy" title="Mermaid diagram" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+```mermaid
+%%{init: {'theme': 'dark'}}%%
+flowchart TD
+    A[Client] -->|Request| B[FastAPI]
+    B --> C[API Key Authentication]
+    C --> D[Redis Rate Limiter]
+    D --> E[Pydantic Validation]
+    E --> G[Summarization Service]
+    G --> H(Input Size)
+    H --> |Small| I[LLM Provider] --> K[Response Model]
+    H --> |Large| J[Text Chunker] --> L[Summarize Each Chunk] --> M[Combine Intermediate Summaries] --> N[Final Summary] --> K
+    K --> O[JSON Response]
+```
