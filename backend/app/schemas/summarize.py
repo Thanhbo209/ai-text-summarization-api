@@ -8,8 +8,8 @@ StyleType = Literal["paragraph", "bullet_points", "executive"]
 class SummarizeRequest(BaseModel):
     # "..." mean required, no default
     text: str = Field(..., min_length=1)
-    length: LengthType = LengthType.medium
-    style: StyleType = StyleType.paragraph
+    length: LengthType = "medium"
+    style: StyleType = "paragraph"
 
     @field_validator("text")
     @classmethod
