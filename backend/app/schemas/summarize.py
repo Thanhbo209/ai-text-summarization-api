@@ -1,22 +1,15 @@
-from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-
-class LengthEnum(str, Enum):
-    short = 'short'
-    medium = 'medium'
-    long = 'long'
-
-class StyleEnum(str, Enum):
-    paragraph = 'paragraph'
-    bullet_points = 'bullet_points'
-    executive = 'executive'
+LengthType = Literal["short", "medium", "long"]
+StyleType = Literal["paragraph", "bullet_points", "executive"]
 
 class SummarizeRequest(BaseModel):
+    # "..." mean required, no default
     text: str = Field(..., min_length=1)
-    length: LengthEnum = LengthEnum.medium
-    style: StyleEnum = StyleEnum.paragraph
+    length: LengthType = LengthType.medium
+    style: StyleType = StyleType.paragraph
 
     @field_validator("text")
     @classmethod
@@ -25,3 +18,6 @@ class SummarizeRequest(BaseModel):
         if not stripped:
             raise ValueError("text cannot be empty or consist only of whitespace")
         return stripped
+
+class SummarizeResponse(BaseModel):
+    summary: str = Field(..., min_length=1)
