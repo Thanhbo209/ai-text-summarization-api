@@ -1,6 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 
 from app.schemas.summarize import SummarizeRequest, SummarizeResponse
+from app.services.summarization import (
+    summarize_text_with_gemini, 
+    SummarizationProviderError,
+    SummarizationTimeoutError,
+)
+
 
 app = FastAPI()
 
@@ -13,9 +19,29 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 @app.post("/summarize", response_model=SummarizeResponse)
-def summarize_text(data: SummarizeRequest) -> SummarizeResponse:
-    placeholder_summary = (
-        f"[{data.length} | {data.style}] "
-        f"Temporary summary for input of length {len(data.text)}."
-    )
-    return SummarizeResponse(summary=placeholder_summary)
+async def summarize_text(data: SummarizeRequest) -> SummarizeResponse:
+    try:
+        summary = await summarize_text_with_gemini(
+           text=data.text, 
+           length=data.length,
+           style=data.style,
+        )
+
+    except SummarizationTimeoutError as exc:
+       raise HTTPException(
+           status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+           detail="Summarization request timed out."
+        ) from exc
+
+    except SummarizationProviderError as exc:
+        if exc.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Summarization provider rate limit exceeded.",
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to generate summary from provider.",
+        ) from exc
+
+    return SummarizeResponse(summary=summary)
