@@ -45,10 +45,16 @@ async def summarize_text(data: SummarizeRequest) -> SummarizeResponse:
             detail="Summarization provider rejected or failed the request.",
         ) from exc
     
-    except (SummarizationConnectionError, SummarizationResponseError) as exc:
+    except SummarizationConnectionError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Unable to retrieve a valid summary from the provider.",
+            detail="Unable to reach summarization provider.",
+        ) from exc
+
+    except SummarizationResponseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Invalid response received from summarization provider.",
         ) from exc
 
     return SummarizeResponse(summary=summary)
