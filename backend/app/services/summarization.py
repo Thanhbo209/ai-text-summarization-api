@@ -1,21 +1,31 @@
+import logging
+
 import httpx
 
 from app.core.config import Settings, get_settings
 from app.schemas.summarize import LengthType, StyleType
 
-
+logger = logging.getLogger(__name__)
 class SummarizationError(Exception):
     """Base error raised when summarization fails."""
-
 class SummarizationTimeoutError(SummarizationError):
     """Raised when the LLM provider request times out."""
-
+class SummarizationConnectionError(SummarizationError):
+    """Raised when a network/transport connection to the provider fails."""
 class SummarizationProviderError(SummarizationError):
     """Raised when the LLM provider returns an error or invalid payload."""
-
-    def __init__(self, message: str, status_code: int | None = None) -> None:
+    def __init__(
+        self, 
+        message: str, 
+        status_code: int,
+        is_client_error: bool,
+    ) -> None:
         super().__init__(message)
         self.status_code = status_code
+        self.is_client_error = is_client_error
+
+class SummarizationResponseError(SummarizationError):
+    """Raised when the provider returns malformed JSON or an unexpected structure."""
 
 _LENGTH_INSTRUCTIONS: dict[LengthType, str] = {
     "short": "Keep the summary brief and concise (1-2 short sentences or 2-3 short bullets).",
@@ -41,14 +51,23 @@ def _build_endpoint_url(settings: Settings) -> str:
     return f"{base_url}/models/{settings.gemini_model}:generateContent"
 
 def _extract_summary_text(payload: dict) -> str:
+    if not isinstance(payload, dict):
+        raise SummarizationResponseError(
+            "Provider response JSON must be a top-level object."
+        )
+    
     candidates = payload.get("candidates")
-    if not isinstance(candidates, list) or not candidates:
+    if not isinstance(candidates, list) or len(candidates) == 0:
         raise SummarizationProviderError(
             "Provider returned no candidates in response."
         )
 
     first_candidate = candidates[0]
-    finish_reason = first_candidate.get("finishReason")
+    if not isinstance(first_candidate, dict):
+        raise SummarizationResponseError(
+            "Provider response 'candidates[0]' must be an object."
+        )
+    
     content = first_candidate.get("content")
     parts = content.get("parts") if isinstance(content, dict) else None
 
@@ -64,6 +83,8 @@ def _extract_summary_text(payload: dict) -> str:
         if text_chunks:
             return '\n'.join(text_chunks)
 
+    
+    finish_reason = first_candidate.get("finishReason")
     if finish_reason and finish_reason != "STOP":
         raise SummarizationProviderError(
             f"Provider did not return summary text (finishReason={finish_reason})."
@@ -86,7 +107,7 @@ async def summarize_text_with_gemini(
     cfg = settings or get_settings()
     url = _build_endpoint_url(cfg)
     timeout = httpx.Timeout(cfg.llm_timeout_seconds)
-    
+
     headers = {
         "x-goog-api-key": cfg.gemini_api_key,
         "Content_Type": "application/json",
@@ -107,8 +128,6 @@ async def summarize_text_with_gemini(
         }
     }
 
-    
-
     try:
         if client is not None:
             response = await client.post(
@@ -126,31 +145,36 @@ async def summarize_text_with_gemini(
                 )
 
         response.raise_for_status()
-        response_data = response.json()
 
     except httpx.TimeoutException as exc:
+        logger.warning("Gemini request timed out after %.2fs", cfg.llm_timeout_seconds)
         raise SummarizationTimeoutError(
             f"Gemini request timed out after {cfg.llm_timeout_seconds}s."
         ) from exc
 
     except httpx.HTTPStatusError as exc:
-        status = exc.response.status_code
+        status_code = exc.response.status_code
+        is_client_error = 400 <= status_code < 500
+        kind = "4xx client error" if is_client_error else "5xx server error"
+        logger.warning("Gemini returned %s (status=%d)", kind, status_code)
         raise SummarizationProviderError(
-            f"Gemini API returned HTTP {status}.",
-            status_code=status,
+            f"Gemini API returned {kind} (status {status_code}).",
+            status_code=status_code,
+            is_client_error=is_client_error,
         ) from exc
-    
+
+    except httpx.RequestError as exc:
+        logger.warning("Network error calling Gemini API: %s", type(exc).__name__)
+        raise SummarizationConnectionError(
+            f"Failed to connect to Gemini API ({type(exc).__name__})."
+        ) from exc
+
+    try:
+        response_data = response.json()
     except ValueError as exc:
-        raise SummarizationProviderError(
-            "Gemini API returned invalid JSON."
+        logger.warning("Gemini returned malformed JSON (status=%d)", response.status_code)
+        raise SummarizationResponseError(
+            "Gemini API returned malformed JSON."
         ) from exc
-
-    except httpx.HTTPError as exc:
-        raise SummarizationProviderError(
-            f"HTTP error while calling Gemini API: {type(exc).__name__}."
-        ) from exc
-
-    if not isinstance(response_data, dict):
-        raise SummarizationProviderError("Unexpected non-object JSON from provider.")
 
     return _extract_summary_text(response_data)

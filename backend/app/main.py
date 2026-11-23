@@ -2,11 +2,12 @@ from fastapi import FastAPI, HTTPException, status
 
 from app.schemas.summarize import SummarizeRequest, SummarizeResponse
 from app.services.summarization import (
-    summarize_text_with_gemini, 
+    SummarizationConnectionError,
     SummarizationProviderError,
+    SummarizationResponseError,
     SummarizationTimeoutError,
+    summarize_text_with_gemini,
 )
-
 
 app = FastAPI()
 
@@ -41,7 +42,13 @@ async def summarize_text(data: SummarizeRequest) -> SummarizeResponse:
             ) from exc
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Failed to generate summary from provider.",
+            detail="Summarization provider rejected or failed the request.",
+        ) from exc
+    
+    except (SummarizationConnectionError, SummarizationResponseError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to retrieve a valid summary from the provider.",
         ) from exc
 
     return SummarizeResponse(summary=summary)
