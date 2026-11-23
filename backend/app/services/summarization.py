@@ -58,7 +58,7 @@ def _extract_summary_text(payload: dict) -> str:
     
     candidates = payload.get("candidates")
     if not isinstance(candidates, list) or len(candidates) == 0:
-        raise SummarizationProviderError(
+        raise SummarizationResponseError(
             "Provider returned no candidates in response."
         )
 
@@ -86,11 +86,11 @@ def _extract_summary_text(payload: dict) -> str:
     
     finish_reason = first_candidate.get("finishReason")
     if finish_reason and finish_reason != "STOP":
-        raise SummarizationProviderError(
+        raise SummarizationResponseError(
             f"Provider did not return summary text (finishReason={finish_reason})."
         )
 
-    raise SummarizationProviderError(
+    raise SummarizationResponseError(
         "Provider response did not contain extractable summary text."
     )
 
