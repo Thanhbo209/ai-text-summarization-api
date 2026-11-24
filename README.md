@@ -29,3 +29,13 @@ flowchart TD
     K -->|Yes| C
     K -->|No| L[Return chunks]
 ```
+
+```
+flowchart TD
+    A[Client Request] --> B[API Key Dependency]
+    B --> C{Valid Key?}
+    C -->|No| D[401 Unauthorized]
+    C -->|Yes| E[Summarize Endpoint]
+    E --> F[Summarization Service]
+    F --> G[Gemini API]
+```
