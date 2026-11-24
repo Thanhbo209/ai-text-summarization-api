@@ -12,26 +12,38 @@ def _split_paragraphs(text: str) -> list[str]:
 
 def _split_oversized_paragraph(paragraph: str, max_chars: int) -> list[str]:
     """Split a single paragraph exceeding max_chars into pieces each <= max_chars."""  
+    stripped = paragraph.strip()
+    length = len(stripped)
+    if length == 0:
+        return []
+    
     pieces: list[str] = []
-    remaining = paragraph.strip()
+    pos = 0
 
-    while len(remaining) > max_chars:
-        window = remaining[:max_chars]
-
+    while pos < length:
+        if length - pos <= max_chars:
+            tail = stripped[pos:].strip()
+            if tail:
+                pieces.append(tail)
+            break
+            
+        window_end = pos + max_chars
         # Splitting at a whitespace boundary inside the budget window
-        split_at = window.rfind(" ")
-        if split_at <= 0:
-            # Fallback for a single unbroken token longer than max_chars
-            split_at = max_chars
+        split_at = stripped.rfind(" ", pos, window_end)
+        if split_at <= pos:
+            # Hard-split fallback when no whitespace boundary exists in the window
+            piece = stripped[pos:window_end].strip()
+            next_pos = window_end
+        else:
+            piece = stripped[pos:split_at].strip()
+            next_pos = split_at + 1
 
-        piece = remaining[:split_at].strip()
         if piece:
             pieces.append(piece)
 
-        remaining = remaining[split_at:].strip()
-
-    if remaining:
-        pieces.append(remaining)
+        while next_pos < length and stripped[next_pos] == " ":
+            next_pos += 1
+        pos = next_pos
 
     return pieces
 
@@ -53,8 +65,7 @@ def chunk_text(text: str, max_chars: int) -> list[str]:
             if current_chunk is not None:
                 chunks.append(current_chunk)
                 current_chunk = None
-            oversized_pieces = _split_oversized_paragraph(paragraph, max_chars)
-            chunks.extend(oversized_pieces)
+            chunks.extend(_split_oversized_paragraph(paragraph, max_chars))
             continue
 
         if current_chunk is None:
@@ -73,3 +84,4 @@ def chunk_text(text: str, max_chars: int) -> list[str]:
         chunks.append(current_chunk)
 
     return [chunk for chunk in chunks if chunk.strip()]
+
