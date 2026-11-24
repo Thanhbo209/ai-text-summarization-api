@@ -5,7 +5,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.config import Settings
+from app.core.config import Settings, get_settings
 from app.main import app
 from app.services import summarization as summarization_module
 from app.services.summarization import (
@@ -27,6 +27,7 @@ def _make_test_settings() -> Settings:
         gemini_model="gemini-3.5-flash-lite",
         gemini_api_base_url="https://generativelanguage.googleapis.com/v1beta",
         llm_timeout_seconds=5.0,
+        api_key="test-client-api-key",
     )
 
 
@@ -206,11 +207,9 @@ async def test_service_unexpected_response_structure(bad_payload: dict):
 
 
 def test_route_integration_success(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(
-        summarization_module,
-        "get_settings",
-        _make_test_settings,
-    )
+    test_settings = _make_test_settings()
+    app.dependency_overrides[get_settings] = lambda: test_settings
+    monkeypatch.setattr(summarization_module, "get_settings", lambda: test_settings)
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -229,26 +228,28 @@ def test_route_integration_success(monkeypatch: pytest.MonkeyPatch):
 
     _patch_httpx_async_client(monkeypatch, handler)
 
-    client = TestClient(app)
-    response = client.post(
-        "/summarize",
-        json={
-            "text": "End-to-end test input for the FastAPI summarization route.",
-            "length": "short",
-            "style": "paragraph",
-        },
-    )
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/summarize",
+            json={
+                "text": "End-to-end test input for the FastAPI summarization route.",
+                "length": "short",
+                "style": "paragraph",
+            },
+            headers={"X-API-KEY": test_settings.api_key},
+        )
+    finally:
+        app.dependency_overrides.clear()
 
     assert response.status_code == 200
     assert response.json() == {"summary": "Route-level mocked summary."}
 
 
 def test_route_integration_maps_provider_failure_safely(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(
-        summarization_module,
-        "get_settings",
-        _make_test_settings,
-    )
+    test_settings = _make_test_settings()
+    app.dependency_overrides[get_settings] = lambda: test_settings
+    monkeypatch.setattr(summarization_module, "get_settings", lambda: test_settings)
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -258,11 +259,15 @@ def test_route_integration_maps_provider_failure_safely(monkeypatch: pytest.Monk
 
     _patch_httpx_async_client(monkeypatch, handler)
 
-    client = TestClient(app)
-    response = client.post(
-        "/summarize",
-        json={"text": "Trigger upstream 503 failure through route."},
-    )
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/summarize",
+            json={"text": "Trigger upstream 503 failure through route."},
+            headers={"X-API-KEY": test_settings.api_key},
+        )
+    finally:
+        app.dependency_overrides.clear()
 
     assert response.status_code == 502
     body = response.json()

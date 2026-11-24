@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status
 
+from app.dependencies.auth import verify_api_key
 from app.schemas.summarize import SummarizeRequest, SummarizeResponse
 from app.services.summarization import (
     SummarizationConnectionError,
@@ -19,7 +20,7 @@ def home() -> dict[str, str]:
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
-@app.post("/summarize", response_model=SummarizeResponse)
+@app.post("/summarize", response_model=SummarizeResponse, dependencies=[Depends(verify_api_key)])
 async def summarize_text(data: SummarizeRequest) -> SummarizeResponse:
     try:
         summary = await summarize_text_with_gemini(

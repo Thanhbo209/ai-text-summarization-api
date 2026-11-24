@@ -1,6 +1,8 @@
+from functools import lru_cache
+
 from pydantic import Field, HttpUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from functools import lru_cache
+
 
 class Settings(BaseSettings):
     gemini_api_key: str = Field(..., min_length=1) 
@@ -9,6 +11,7 @@ class Settings(BaseSettings):
         default="https://generativelanguage.googleapis.com/v1beta"
     )
     llm_timeout_seconds: float = Field(default=30.0, gt=0)
+    api_key: str = Field(..., min_length=1)
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -16,7 +19,7 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-    @field_validator("gemini_api_key", "gemini_model")
+    @field_validator("gemini_api_key", "gemini_model", "api_key")
     @classmethod
     def validate_not_blank(cls, value: str) -> str:
         stripped = value.strip()
