@@ -27,6 +27,7 @@ def _make_test_settings() -> Settings:
         gemini_model="gemini-3.5-flash-lite",
         gemini_api_base_url="https://generativelanguage.googleapis.com/v1beta",
         llm_timeout_seconds=5.0,
+        api_key="test-client-api-key",
     )
 
 
