@@ -209,6 +209,7 @@ async def test_service_unexpected_response_structure(bad_payload: dict):
 def test_route_integration_success(monkeypatch: pytest.MonkeyPatch):
     test_settings = _make_test_settings()
     app.dependency_overrides[get_settings] = lambda: test_settings
+    monkeypatch.setattr(summarization_module, "get_settings", lambda: test_settings)
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -248,6 +249,7 @@ def test_route_integration_success(monkeypatch: pytest.MonkeyPatch):
 def test_route_integration_maps_provider_failure_safely(monkeypatch: pytest.MonkeyPatch):
     test_settings = _make_test_settings()
     app.dependency_overrides[get_settings] = lambda: test_settings
+    monkeypatch.setattr(summarization_module, "get_settings", lambda: test_settings)
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
