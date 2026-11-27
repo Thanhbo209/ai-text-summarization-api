@@ -2,21 +2,19 @@ import re
 
 _PARAGRAPH_SPLIT_RE = re.compile(r"\r?\n\s*\r?\n+")
 
+
 def _split_paragraphs(text: str) -> list[str]:
     """Split text into non-empty trimmed paragraphs."""
-    return [
-        part.strip()
-        for part in _PARAGRAPH_SPLIT_RE.split(text)
-        if part and part.strip()
-    ]
+    return [part.strip() for part in _PARAGRAPH_SPLIT_RE.split(text) if part and part.strip()]
+
 
 def _split_oversized_paragraph(paragraph: str, max_chars: int) -> list[str]:
-    """Split a single paragraph exceeding max_chars into pieces each <= max_chars."""  
+    """Split a single paragraph exceeding max_chars into pieces each <= max_chars."""
     stripped = paragraph.strip()
     length = len(stripped)
     if length == 0:
         return []
-    
+
     pieces: list[str] = []
     pos = 0
 
@@ -26,7 +24,7 @@ def _split_oversized_paragraph(paragraph: str, max_chars: int) -> list[str]:
             if tail:
                 pieces.append(tail)
             break
-            
+
         window_end = pos + max_chars
         # Splitting at a whitespace boundary inside the budget window
         split_at = stripped.rfind(" ", pos, window_end)
@@ -46,6 +44,7 @@ def _split_oversized_paragraph(paragraph: str, max_chars: int) -> list[str]:
         pos = next_pos
 
     return pieces
+
 
 def chunk_text(text: str, max_chars: int) -> list[str]:
     """Deterministically split text into chunks each within max_chars."""
@@ -84,4 +83,3 @@ def chunk_text(text: str, max_chars: int) -> list[str]:
         chunks.append(current_chunk)
 
     return [chunk for chunk in chunks if chunk.strip()]
-
