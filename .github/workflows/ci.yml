@@ -31,7 +31,7 @@ jobs:
     env:
       # Dummy test values only — never requires real Gemini credentials or local .env
       GEMINI_API_KEY: test-dummy-gemini-key-for-ci
-      GEMINI_MODEL: gemini-2.5-flash
+      GEMINI_MODEL: gemini-3.5-flash-lite
       GEMINI_API_BASE_URL: https://generativelanguage.googleapis.com/v1beta
       LLM_TIMEOUT_SECONDS: "5.0"
       API_KEY: test-ci-api-key-123
