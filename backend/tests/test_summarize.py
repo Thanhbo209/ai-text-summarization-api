@@ -1,4 +1,6 @@
+import sys
 from collections.abc import Generator
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,9 +20,25 @@ class _FakeRedis:
         return _AllowAllScript()
 
 
+def _patch_summarization_service(
+    monkeypatch: pytest.MonkeyPatch,
+    mock_fn: AsyncMock,
+) -> None:
+    """Patch summarize_text_with_gemini across loaded app route/service modules."""
+    for module_name, module in list(sys.modules.items()):
+        if module is None:
+            continue
+        if module_name == "app.services.summarization" or module_name.startswith("app."):  # noqa: SIM102
+            if hasattr(module, "summarize_text_with_gemini"):
+                monkeypatch.setattr(module, "summarize_text_with_gemini", mock_fn)
+
+
 @pytest.fixture(autouse=True)
-def _bypass_dependencies() -> Generator[None]:
+def _bypass_dependencies(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
     fake_redis = _FakeRedis()
+    mock_summarize = AsyncMock(return_value="Mocked summary response.")
+    _patch_summarization_service(monkeypatch, mock_summarize)
+
     app.dependency_overrides[verify_api_key] = lambda: "test-api-key"
     app.dependency_overrides[get_redis_client] = lambda: fake_redis
     try:
