@@ -19,6 +19,11 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    redis_url: str = "redis://localhost:6379/0"
+    redis_max_connections: int = 20
+    redis_socket_connect_timeout: float = 3.0
+    redis_socket_timeout: float = 5.0
+
     @field_validator("gemini_api_key", "gemini_model", "api_key")
     @classmethod
     def validate_not_blank(cls, value: str) -> str:
