@@ -1,15 +1,14 @@
-import pytest  # noqa: I001
-import importlib
-import sys
 from collections.abc import Generator
 from pathlib import Path
+import sys
 from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
-from app.core.config import Settings, get_settings
-from app.main import app
-from app.services import summarization as summarization_service
+import pytest
 
+from app.core.config import Settings, get_settings
+from app.dependencies.redis import get_redis_client
+from app.main import app
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
@@ -17,6 +16,16 @@ if str(BACKEND_DIR) not in sys.path:
 
 EXPECTED_API_KEY = "super-secret-test-key-123"
 HEADER_NAME = "X-API-KEY"
+
+
+class _AllowAllScript:
+    async def __call__(self, keys: list[str], args: list[object]) -> list[int]:
+        return [1, 60]
+
+
+class _FakeRedisClient:
+    def register_script(self, script: str) -> _AllowAllScript:
+        return _AllowAllScript()
 
 
 def _override_settings() -> Settings:
@@ -47,11 +56,13 @@ def _patch_summarization_service(
 def auth_client(
     monkeypatch: pytest.MonkeyPatch,
 ) -> Generator[tuple[TestClient, AsyncMock]]:
-    """Provide a TestClient with overridden settings and a mocked summarization service."""
+    """Provide a TestClient with overridden settings, Redis, and mocked summarization service."""
     mock_summarize = AsyncMock(return_value="Mocked summary response.")
+    fake_redis = _FakeRedisClient()
     _patch_summarization_service(monkeypatch, mock_summarize)
 
     app.dependency_overrides[get_settings] = _override_settings
+    app.dependency_overrides[get_redis_client] = lambda: fake_redis
     client = TestClient(app)
 
     try:

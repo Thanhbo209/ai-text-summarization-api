@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     redis_max_connections: int = 20
     redis_socket_connect_timeout: float = 3.0
     redis_socket_timeout: float = 5.0
+    
+    rate_limit_requests: int = Field(default=10, ge=1)
+    rate_limit_window_seconds: int = Field(default=60, ge=1)
+    rate_limit_key_prefix: str = "rate_limit"
 
     @field_validator("gemini_api_key", "gemini_model", "api_key")
     @classmethod

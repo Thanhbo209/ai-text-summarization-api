@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings, get_settings
+from app.dependencies.redis import get_redis_client
 from app.main import app
 from app.services import summarization as summarization_module
 from app.services.summarization import (
@@ -19,6 +20,17 @@ from app.services.summarization import (
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
+
+
+class _AllowAllScript:
+    async def __call__(self, keys: list[str], args: list[object]) -> list[int]:
+        return [1, 60]
+
+
+class _FakeRedisClient:
+    def register_script(self, script: str) -> _AllowAllScript:
+        return _AllowAllScript()
+
 
 def _make_test_settings() -> Settings:
     return Settings(
@@ -208,7 +220,9 @@ async def test_service_unexpected_response_structure(bad_payload: dict):
 
 def test_route_integration_success(monkeypatch: pytest.MonkeyPatch):
     test_settings = _make_test_settings()
+    fake_redis = _FakeRedisClient()
     app.dependency_overrides[get_settings] = lambda: test_settings
+    app.dependency_overrides[get_redis_client] = lambda: fake_redis
     monkeypatch.setattr(summarization_module, "get_settings", lambda: test_settings)
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -248,7 +262,9 @@ def test_route_integration_success(monkeypatch: pytest.MonkeyPatch):
 
 def test_route_integration_maps_provider_failure_safely(monkeypatch: pytest.MonkeyPatch):
     test_settings = _make_test_settings()
+    fake_redis = _FakeRedisClient()
     app.dependency_overrides[get_settings] = lambda: test_settings
+    app.dependency_overrides[get_redis_client] = lambda: fake_redis
     monkeypatch.setattr(summarization_module, "get_settings", lambda: test_settings)
 
     def handler(request: httpx.Request) -> httpx.Response:

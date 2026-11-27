@@ -8,6 +8,7 @@ from redis.asyncio import Redis
 from app.core.config import get_settings
 from app.core.redis import REDIS_TRANSIENT_ERRORS, RedisConnectionManager
 from app.dependencies.auth import verify_api_key
+from app.dependencies.rate_limit import rate_limit
 from app.dependencies.redis import get_redis_client
 from app.schemas.summarize import SummarizeRequest, SummarizeResponse
 from app.services.summarization import (
@@ -52,7 +53,7 @@ async def redis_check(redis_client: Annotated[Redis, Depends(get_redis_client)])
             detail="Redis command failed.",
         ) from exc
 
-@app.post("/summarize", response_model=SummarizeResponse, dependencies=[Depends(verify_api_key)])
+@app.post("/summarize", response_model=SummarizeResponse, dependencies=[Depends(verify_api_key), Depends(rate_limit())])
 async def summarize_text(data: SummarizeRequest) -> SummarizeResponse:
     try:
         summary = await summarize_text_with_gemini(
