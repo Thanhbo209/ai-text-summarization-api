@@ -46,7 +46,11 @@ def _locate_summarizer_target(fastapi_app) -> tuple[object, str] | None:
 
                 module = sys.modules.get(module_name)
                 if module is not None:
-                    for attr_name in ("summarize_text_service", "summarize_service", "generate_summary"):
+                    for attr_name in (
+                        "summarize_text_service",
+                        "summarize_service",
+                        "generate_summary",
+                    ):
                         if hasattr(module, attr_name):
                             return module, attr_name
     return None
@@ -158,9 +162,7 @@ async def test_invalid_api_key_returns_401_without_consuming_quota(
         assert resp.status_code == 401
 
     # Ensure no rate-limit counter keys were created for the rejected key
-    remaining_keys = [
-        key async for key in redis_client.scan_iter(match="test_rl_*")
-    ]
+    remaining_keys = [key async for key in redis_client.scan_iter(match="test_rl_*")]
     assert remaining_keys == []
 
 
@@ -205,14 +207,20 @@ async def test_independent_keys_have_independent_counters(
 
     # Exhaust quota for key A (limit = 3)
     for _ in range(3):
-        assert (await client.post("/summarize", json=SUMMARIZE_PAYLOAD, headers=headers_a)).status_code == 200
-    assert (await client.post("/summarize", json=SUMMARIZE_PAYLOAD, headers=headers_a)).status_code == 429
+        assert (
+            await client.post("/summarize", json=SUMMARIZE_PAYLOAD, headers=headers_a)
+        ).status_code == 200
+    assert (
+        await client.post("/summarize", json=SUMMARIZE_PAYLOAD, headers=headers_a)
+    ).status_code == 429
 
     # Key B still has its own full quota
     for _ in range(3):
         resp_b = await client.post("/summarize", json=SUMMARIZE_PAYLOAD, headers=headers_b)
         assert resp_b.status_code == 200
-    assert (await client.post("/summarize", json=SUMMARIZE_PAYLOAD, headers=headers_b)).status_code == 429
+    assert (
+        await client.post("/summarize", json=SUMMARIZE_PAYLOAD, headers=headers_b)
+    ).status_code == 429
 
 
 @pytest.mark.asyncio
@@ -224,10 +232,7 @@ async def test_concurrent_requests_do_not_exceed_limit(
 
     # Limit is 3; fire 10 requests concurrently
     responses = await asyncio.gather(
-        *(
-            client.post("/summarize", json=SUMMARIZE_PAYLOAD, headers=headers)
-            for _ in range(10)
-        )
+        *(client.post("/summarize", json=SUMMARIZE_PAYLOAD, headers=headers) for _ in range(10))
     )
 
     allowed_count = sum(1 for r in responses if r.status_code == 200)

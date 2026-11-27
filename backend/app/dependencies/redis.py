@@ -8,9 +8,7 @@ from app.core.redis import RedisConnectionManager, RedisUnavailableError
 
 
 def get_redis_manager(request: Request) -> RedisConnectionManager:
-    manager: RedisConnectionManager | None = getattr(
-        request.app.state, "redis_manager", None
-    )
+    manager: RedisConnectionManager | None = getattr(request.app.state, "redis_manager", None)
     if manager is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

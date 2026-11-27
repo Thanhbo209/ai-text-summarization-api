@@ -32,15 +32,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     finally:
         await redis_manager.shutdown()
 
+
 app = FastAPI(title="AI Text Summarization API", lifespan=lifespan)
+
 
 @app.get("/")
 def home() -> dict[str, str]:
     return {"message": "Hello World"}
 
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
 
 @app.get("/redis-check")
 async def redis_check(redis_client: Annotated[Redis, Depends(get_redis_client)]):
@@ -53,19 +57,23 @@ async def redis_check(redis_client: Annotated[Redis, Depends(get_redis_client)])
             detail="Redis command failed.",
         ) from exc
 
-@app.post("/summarize", response_model=SummarizeResponse, dependencies=[Depends(verify_api_key), Depends(rate_limit())])
+
+@app.post(
+    "/summarize",
+    response_model=SummarizeResponse,
+    dependencies=[Depends(verify_api_key), Depends(rate_limit())],
+)
 async def summarize_text(data: SummarizeRequest) -> SummarizeResponse:
     try:
         summary = await summarize_text_with_gemini(
-           text=data.text, 
-           length=data.length,
-           style=data.style,
+            text=data.text,
+            length=data.length,
+            style=data.style,
         )
 
     except SummarizationTimeoutError as exc:
-       raise HTTPException(
-           status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-           detail="Summarization request timed out."
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="Summarization request timed out."
         ) from exc
 
     except SummarizationProviderError as exc:
@@ -78,7 +86,7 @@ async def summarize_text(data: SummarizeRequest) -> SummarizeResponse:
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Summarization provider rejected or failed the request.",
         ) from exc
-    
+
     except SummarizationConnectionError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

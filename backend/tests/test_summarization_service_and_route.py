@@ -76,9 +76,7 @@ async def test_service_provider_success():
             json={
                 "candidates": [
                     {
-                        "content": {
-                            "parts": [{"text": "  Concise summary output.  "}]
-                        },
+                        "content": {"parts": [{"text": "  Concise summary output.  "}]},
                         "finishReason": "STOP",
                     }
                 ]
@@ -231,9 +229,7 @@ def test_route_integration_success(monkeypatch: pytest.MonkeyPatch):
             json={
                 "candidates": [
                     {
-                        "content": {
-                            "parts": [{"text": "Route-level mocked summary."}]
-                        },
+                        "content": {"parts": [{"text": "Route-level mocked summary."}]},
                         "finishReason": "STOP",
                     }
                 ]

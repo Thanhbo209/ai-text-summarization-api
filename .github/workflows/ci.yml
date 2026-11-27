@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: backend
+        shell: bash
+
+    env:
+      # Dummy test values only — never requires real Gemini credentials or local .env
+      GEMINI_API_KEY: test-dummy-gemini-key-for-ci
+      GEMINI_MODEL: gemini-2.5-flash
+      GEMINI_API_BASE_URL: https://generativelanguage.googleapis.com/v1beta
+      LLM_TIMEOUT_SECONDS: "5.0"
+      API_KEY: test-ci-api-key-123
+      REDIS_URL: redis://127.0.0.1:6379/0
+      TEST_REDIS_URL: redis://127.0.0.1:6379/1
+      RATE_LIMIT_REQUESTS: "10"
+      RATE_LIMIT_WINDOW_SECONDS: "60"
+      RATE_LIMIT_KEY_PREFIX: rate_limit
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install project dependencies
+        run: uv sync --frozen --dev
+
+      - name: Ruff lint
+        run: uv run --no-sync ruff check .
+
+      - name: Ruff format check
+        run: uv run --no-sync ruff format --check .
+
+      - name: Start Redis
+        run: redis-cli -h 127.0.0.1 -p 6379 ping
+
+      - name: Run pytest
+        run: uv run --no-sync pytest -v

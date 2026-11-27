@@ -62,9 +62,9 @@ def test_several_short_paragraphs_combined_when_possible():
 
 
 def test_paragraphs_exceeding_combined_budget_produce_multiple_chunks():
-    p1 = "First paragraph about async I/O."          # 33 chars
-    p2 = "Second paragraph about schema checks."      # 37 chars
-    p3 = "Third paragraph about clean error mapping." # 43 chars
+    p1 = "First paragraph about async I/O."  # 33 chars
+    p2 = "Second paragraph about schema checks."  # 37 chars
+    p3 = "Third paragraph about clean error mapping."  # 43 chars
     text = f"{p1}\n\n{p2}\n\n{p3}"
 
     # p1 + "\n\n" + p2 = 72 chars (> 70), so p1 and p2 split into separate chunks.
@@ -100,7 +100,9 @@ def test_single_extremely_long_word_respects_hard_limit():
 def test_content_preservation_across_mixed_paragraphs_and_splits():
     text = (
         "Intro sentence.\n\n"
-        + ("Detailed middle section with multiple words that will exceed the chunk limit " * 3).strip()
+        + (
+            "Detailed middle section with multiple words that will exceed the chunk limit " * 3
+        ).strip()
         + "\n\nClosing remark."
     )
     max_chars = 65

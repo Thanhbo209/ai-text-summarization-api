@@ -1,10 +1,10 @@
+import sys
 from collections.abc import Generator
 from pathlib import Path
-import sys
 from unittest.mock import AsyncMock
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 from app.core.config import Settings, get_settings
 from app.dependencies.redis import get_redis_client
