@@ -65,8 +65,16 @@ jobs:
       - name: Ruff format check
         run: uv run --no-sync ruff format --check .
 
-      - name: Start Redis
-        run: redis-cli -h 127.0.0.1 -p 6379 ping
+      - name: Verify Redis service
+        working-directory: .
+        run: |
+          if command -v redis-cli >/dev/null 2>&1; then
+            redis-cli -h 127.0.0.1 -p 6379 ping
+          else
+            CID=$(docker ps --filter "ancestor=redis:7-alpine" --format "{{.ID}}" | head -n 1)
+            test -n "$CID"
+            docker exec "$CID" redis-cli ping
+          fi
 
       - name: Run pytest
         run: uv run --no-sync pytest -v

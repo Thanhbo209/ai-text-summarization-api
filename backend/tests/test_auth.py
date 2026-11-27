@@ -3,16 +3,16 @@ from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import AsyncMock
 
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
 import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings, get_settings
 from app.dependencies.redis import get_redis_client
 from app.main import app
-
-BACKEND_DIR = Path(__file__).resolve().parents[1]
-if str(BACKEND_DIR) not in sys.path:
-    sys.path.insert(0, str(BACKEND_DIR))
 
 EXPECTED_API_KEY = "super-secret-test-key-123"
 HEADER_NAME = "X-API-KEY"
